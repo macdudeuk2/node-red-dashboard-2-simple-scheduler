@@ -46,7 +46,7 @@
 
     <!-- Add/Edit Dialog -->
     <div v-if="showAddDialog" class="dialog-overlay" @click.self="closeDialog">
-      <div class="dialog-content">
+      <div class="dialog-content" @click.stop @mousedown.stop>
         <div class="dialog-header">
           <h3>{{ editingSchedule ? 'Edit Schedule' : 'Add Schedule' }}</h3>
           <button @click="closeDialog" class="btn-close">×</button>
@@ -720,7 +720,7 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
 }
 
 .dialog-content {
