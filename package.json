@@ -9,10 +9,6 @@
     "time-scheduler"
   ],
   "license": "MIT",
-  "exports": {
-    "import": "./resources/ui-scheduler.umd.js",
-    "require": "./resources/ui-scheduler.umd.js"
-  },
   "files": [
     "nodes/*",
     "ui/*",
@@ -51,7 +47,7 @@
     "version": "1.0.0",
     "widgets": {
       "ui-scheduler": {
-        "output": "./resources/ui-scheduler.umd.js",
+        "output": "ui-scheduler.umd.js",
         "component": "SimpleScheduler"
       }
     }
