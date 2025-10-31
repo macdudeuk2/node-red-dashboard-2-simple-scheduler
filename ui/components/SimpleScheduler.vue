@@ -401,7 +401,12 @@ export default {
     },
     editSchedule(schedule) {
       this.editingSchedule = schedule
-      this.formData = { ...schedule }
+      this.formData = { 
+        ...schedule,
+        // Ensure payload types exist (default to 'bool' if not present for old schedules)
+        payloadOnType: schedule.payloadOnType || 'bool',
+        payloadOffType: schedule.payloadOffType || 'bool'
+      }
       // Convert date to datetime-local format
       if (schedule.date) {
         const date = new Date(schedule.date)
@@ -418,7 +423,10 @@ export default {
       const copy = {
         ...schedule,
         id: null,
-        name: schedule.name + ' (Copy)'
+        name: schedule.name + ' (Copy)',
+        // Ensure payload types exist
+        payloadOnType: schedule.payloadOnType || 'bool',
+        payloadOffType: schedule.payloadOffType || 'bool'
       }
       this.formData = copy
       this.editingSchedule = null
@@ -834,19 +842,23 @@ input:checked + .slider:before {
 .payload-input-group {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .payload-type-select {
-  width: 120px;
+  min-width: 100px;
+  max-width: 100px;
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .payload-value-input {
   flex: 1;
+  min-width: 0;
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
