@@ -51,7 +51,7 @@
     "version": "1.0.0",
     "widgets": {
       "ui-scheduler": {
-        "output": "ui-scheduler.umd.js",
+        "output": "./resources/ui-scheduler.umd.js",
         "component": "SimpleScheduler"
       }
     }
