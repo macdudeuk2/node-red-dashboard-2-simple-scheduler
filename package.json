@@ -9,6 +9,10 @@
     "time-scheduler"
   ],
   "license": "MIT",
+  "exports": {
+    ".": "./ui-scheduler.umd.js",
+    "./ui-scheduler.umd.js": "./ui-scheduler.umd.js"
+  },
   "files": [
     "nodes/*",
     "ui/*",
