@@ -2,7 +2,7 @@
 node_modules/
 
 # Build output
-resources/
+# resources/ - commented out: Dashboard 2.0 needs this directory
 # ui-scheduler.umd.js - commented out: needed for production installs without build
 
 # OS files
