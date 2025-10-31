@@ -288,17 +288,10 @@ export default {
     }
   },
   mounted() {
-    console.log('[UI Scheduler Mounted] Component mounted')
-    console.log('[UI Scheduler Mounted] this.id:', this.id)
-    console.log('[UI Scheduler Mounted] this.props:', this.props)
-    console.log('[UI Scheduler Mounted] Node name:', this.nodeName)
-    
     // Listen for schedule updates from Node-RED
-    // Use socket to listen for widget-load and msg-input events
     if (this.socket) {
       // Listen for messages sent to this widget
       this.socket.on('msg-input:' + this.id, (msg) => {
-        console.log('[UI Scheduler] Received msg-input:', msg)
         if (msg.payload && msg.payload.command === 'schedules-updated') {
           this.schedules = msg.payload.schedules || []
         }
@@ -306,7 +299,6 @@ export default {
       
       // Listen for widget load event
       this.socket.on('widget-load:' + this.id, (msg) => {
-        console.log('[UI Scheduler] Received widget-load:', msg)
         if (msg && msg.payload && msg.payload.command === 'schedules-updated') {
           this.schedules = msg.payload.schedules || []
         }
@@ -314,7 +306,6 @@ export default {
       
       // Listen for connection/reconnection events (e.g., after deploy)
       this.socket.on('connect', () => {
-        console.log('[UI Scheduler] Socket connected, requesting schedules')
         this.requestSchedules()
       })
     }
@@ -331,17 +322,12 @@ export default {
   },
   methods: {
     requestSchedules() {
-      console.log('[UI Scheduler] Requesting schedules')
-      
       // Send via socket to Node-RED
       if (this.socket) {
         this.socket.emit('widget-action', this.id, {
           action: 'list',
           payload: null
         })
-        console.log('[UI Scheduler] Sent list request via socket')
-      } else {
-        console.warn('[UI Scheduler] Socket not available for requestSchedules')
       }
     },
     getScheduleTypeLabel(type) {
@@ -488,17 +474,12 @@ export default {
         schedule.id = 'schedule-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
       }
 
-      console.log('[UI Scheduler] Saving schedule:', schedule)
-      
       // Send to Node-RED via socket
       if (this.socket) {
-        console.log('[UI Scheduler] Sending via socket')
         this.socket.emit('widget-action', this.id, {
           action: this.editingSchedule ? 'update' : 'add',
           payload: schedule
         })
-      } else {
-        console.error('[UI Scheduler] Socket not available - cannot save schedule')
       }
 
       this.closeDialog()

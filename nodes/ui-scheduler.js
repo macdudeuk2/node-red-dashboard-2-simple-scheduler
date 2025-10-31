@@ -190,10 +190,8 @@ module.exports = function (RED) {
         node.context().get('schedules', node.contextStore, (err, schedules) => {
           if (!err && schedules && Array.isArray(schedules)) {
             node.schedules = schedules
-            node.log('Loaded ' + schedules.length + ' schedules from context store')
           } else {
             node.schedules = []
-            node.log('No schedules found in context store, starting with empty list')
           }
           if (callback) callback()
         })
@@ -203,14 +201,12 @@ module.exports = function (RED) {
           try {
             const data = fs.readFileSync(filePath, 'utf8')
             node.schedules = JSON.parse(data)
-            node.log('Loaded ' + node.schedules.length + ' schedules from file')
           } catch (err) {
             node.error('Error loading schedules from file: ' + err.message)
             node.schedules = []
           }
         } else {
           node.schedules = []
-          node.log('No schedule file found, starting with empty list')
         }
         if (callback) callback()
       }
@@ -221,11 +217,9 @@ module.exports = function (RED) {
       try {
         if (node.persistence === 'context') {
           node.context().set('schedules', node.schedules, node.contextStore)
-          node.log('Saved ' + node.schedules.length + ' schedules to context store: ' + node.contextStore)
         } else if (node.persistence === 'file') {
           const filePath = path.join(RED.settings.userDir, 'scheduler-' + node.id + '.json')
           fs.writeFileSync(filePath, JSON.stringify(node.schedules, null, 2), 'utf8')
-          node.log('Saved ' + node.schedules.length + ' schedules to file: ' + filePath)
         }
       } catch (err) {
         node.error('Error saving schedules: ' + err.message)
@@ -322,7 +316,6 @@ module.exports = function (RED) {
       }
       
       node.send(msg)
-      node.log('Triggered schedule "' + schedule.name + '" - ' + event + ' event with payload (' + typeof payload + '): ' + JSON.stringify(payload))
       
       // For duration schedules, schedule the end event
       if (schedule.type === 'duration' && event === 'start') {
@@ -373,19 +366,16 @@ module.exports = function (RED) {
     
     // Initialize - load schedules then start them
     node.loadSchedules(() => {
-      node.log('Initialization complete, starting ' + node.schedules.length + ' schedules')
       node.startAllSchedules()
     })
     
     // Handle input messages (from UI or programmatic control)
     node.on('input', function (msg) {
-      node.log('Input handler received message: ' + JSON.stringify(msg))
       // Dashboard 2.0 widgets send messages via input
       // Check if this is a widget action message
       if (msg.ui_update || msg.action) {
         const action = msg.action || msg.ui_update?.action
         const payload = msg.payload || msg.ui_update?.payload
-        node.log('Processing action: ' + action)
         
         if (action === 'add' || action === 'update') {
           try {
@@ -570,13 +560,11 @@ module.exports = function (RED) {
         onSocket: {
           'widget-action': function (conn, id, msg) {
             // Handle socket events from the UI
-            node.log('Received widget-action via socket for id: ' + id + ', msg: ' + JSON.stringify(msg))
             if (id === node.id && msg && msg.action) {
               const inputMsg = {
                 action: msg.action,
                 payload: msg.payload
               }
-              node.log('Processing widget-action: ' + msg.action)
               
               // Process the action directly here, passing the connection for response
               handleWidgetAction(inputMsg, conn, id)
@@ -599,8 +587,6 @@ module.exports = function (RED) {
       const action = msg.action
       const payload = msg.payload
       
-      node.log('handleWidgetAction called with action: ' + action)
-      
       if (action === 'list') {
         // Send current schedules to UI via socket
         const response = {
@@ -609,12 +595,9 @@ module.exports = function (RED) {
             schedules: node.schedules
           }
         }
-        node.log('Sending schedules list to widget, count: ' + node.schedules.length)
         if (conn && widgetId) {
           conn.emit('msg-input:' + widgetId, response)
         }
-        // Also send to output port for flow wiring
-        node.send([null, response])
       } else if (action === 'add' || action === 'update') {
         try {
           const schedule = payload
@@ -645,12 +628,9 @@ module.exports = function (RED) {
               schedules: node.schedules
             }
           }
-          node.log('Sending updated schedules to widget, count: ' + node.schedules.length)
           if (conn && widgetId) {
             conn.emit('msg-input:' + widgetId, response)
           }
-          // Also send to output port for flow wiring
-          node.send([null, response])
         } catch (err) {
           node.error('Error adding/updating schedule: ' + err.message)
         }
