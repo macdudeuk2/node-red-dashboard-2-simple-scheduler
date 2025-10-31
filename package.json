@@ -1,0 +1,60 @@
+{
+  "name": "node-red-dashboard-2-ui-scheduler",
+  "version": "1.0.0",
+  "description": "A simple, reliable scheduler node for Node-RED Dashboard 2.0",
+  "keywords": [
+    "node-red",
+    "node-red-dashboard-2",
+    "scheduler",
+    "time-scheduler"
+  ],
+  "license": "MIT",
+  "exports": {
+    "import": "./resources/ui-scheduler.umd.js",
+    "require": "./resources/ui-scheduler.umd.js"
+  },
+  "files": [
+    "nodes/*",
+    "ui/*",
+    "resources/*",
+    "ui-scheduler.umd.js"
+  ],
+  "scripts": {
+    "build": "npm run add-package-info && vite build && cp resources/ui-scheduler.umd.js ui-scheduler.umd.js",
+    "build:dev": "cross-env NODE_ENV=development vite build --mode development",
+    "dev": "cross-env NODE_ENV=development vite build --mode development --watch",
+    "add-package-info": "node ./scripts/addPackageInfo.js ./package.json ./nodes/ui-scheduler.js",
+    "lint": "eslint --ext .js,.vue ."
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "@date-fns/tz": "^1.2.0",
+    "vue": "^3.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.53.0",
+    "vite": "^5.0.13",
+    "vite-plugin-css-injected-by-js": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "node-red": {
+    "version": ">=3.0.0",
+    "nodes": {
+      "ui-scheduler": "nodes/ui-scheduler.js"
+    }
+  },
+  "node-red-dashboard-2": {
+    "version": "1.0.0",
+    "widgets": {
+      "ui-scheduler": {
+        "output": "ui-scheduler.umd.js",
+        "component": "SimpleScheduler"
+      }
+    }
+  }
+}
+

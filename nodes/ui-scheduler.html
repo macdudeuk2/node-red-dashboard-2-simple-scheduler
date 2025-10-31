@@ -1,0 +1,131 @@
+<script type="text/html" data-template-name="ui-scheduler">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-group"><i class="fa fa-object-group"></i> Group</label>
+        <input type="text" id="node-input-group">
+    </div>
+    <div class="form-row">
+        <label for="node-input-timezone"><i class="fa fa-clock-o"></i> Timezone</label>
+        <input type="text" id="node-input-timezone" placeholder="Leave empty for system timezone">
+    </div>
+    <div class="form-row">
+        <label for="node-input-persistence"><i class="fa fa-database"></i> Persistence</label>
+        <select id="node-input-persistence">
+            <option value="file">File System (Recommended)</option>
+            <option value="context">Context Store</option>
+        </select>
+        <div class="form-tips" style="margin-top: 5px;">
+            <b>File System:</b> Saves to ~/.node-red/scheduler-[id].json<br>
+            <b>Context Store:</b> Uses Node-RED's context (requires configuration in settings.js)
+        </div>
+    </div>
+    <div class="form-row" id="context-store-row">
+        <label for="node-input-contextStore"><i class="fa fa-archive"></i> Context Store Name</label>
+        <input type="text" id="node-input-contextStore" placeholder="default">
+        <div class="form-tips" style="margin-top: 5px;">
+            Common values: "default", "file", "memory"
+        </div>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="ui-scheduler">
+    <p>A simple, reliable scheduler node for Node-RED Dashboard 2.0.</p>
+    
+    <h3>Features</h3>
+    <ul>
+        <li><strong>Daily schedules:</strong> Trigger at a specific time each day</li>
+        <li><strong>Weekly schedules:</strong> Trigger on selected days at a specific time</li>
+        <li><strong>One-time schedules:</strong> Trigger once at a specific date/time</li>
+        <li><strong>Timespan schedules:</strong> Activate from start time to end time</li>
+        <li><strong>Duration schedules:</strong> Run for a specified number of minutes</li>
+        <li><strong>Custom payloads:</strong> Set different payloads for start and end events</li>
+        <li><strong>Persistence:</strong> Schedules persist across Node-RED restarts</li>
+    </ul>
+    
+    <h3>Output</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>The configured payload (payloadOn or payloadOff)</dd>
+        <dt>topic <span class="property-type">string</span></dt>
+        <dd>The schedule name</dd>
+        <dt>schedule <span class="property-type">object</span></dt>
+        <dd>Schedule details (id, name, type, event)</dd>
+    </dl>
+    
+    <h3>Configuration</h3>
+    <dl class="message-properties">
+        <dt>Group <span class="property-type">ui-group</span></dt>
+        <dd>The Dashboard 2.0 group where this scheduler will be displayed</dd>
+        
+        <dt>Timezone <span class="property-type">string</span></dt>
+        <dd>IANA timezone name (e.g., "America/New_York"). Leave empty for system timezone.</dd>
+        
+        <dt>Persistence <span class="property-type">select</span></dt>
+        <dd>Where to store schedules: Context Store or File System</dd>
+        
+        <dt>Context Store <span class="property-type">string</span></dt>
+        <dd>Name of the context store (only used if Persistence is "Context Store")</dd>
+    </dl>
+    
+    <h3>Managing Schedules</h3>
+    <p>Schedules can be managed via:</p>
+    <ul>
+        <li><strong>Dashboard UI:</strong> Add, edit, delete, and toggle schedules</li>
+        <li><strong>Input messages:</strong> Send commands programmatically</li>
+    </ul>
+    
+    <h4>Input Message Commands</h4>
+    <dl class="message-properties">
+        <dt>topic: "add" or "update"</dt>
+        <dd>Add or update a schedule. msg.payload should contain the schedule object.</dd>
+        
+        <dt>topic: "remove" or "delete"</dt>
+        <dd>Remove a schedule. msg.payload should contain the schedule ID.</dd>
+        
+        <dt>topic: "enable" or "disable"</dt>
+        <dd>Enable or disable a schedule. msg.payload should contain the schedule ID.</dd>
+        
+        <dt>topic: "trigger"</dt>
+        <dd>Manually trigger a schedule. msg.payload should contain the schedule ID.</dd>
+        
+        <dt>topic: "list"</dt>
+        <dd>Request the current list of schedules.</dd>
+    </dl>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('ui-scheduler', {
+        category: 'dashboard',
+        color: '#00aaff',
+        defaults: {
+            name: { value: '' },
+            group: { type: 'ui-group', required: true },
+            timezone: { value: '' },
+            persistence: { value: 'file' },
+            contextStore: { value: 'default' }
+        },
+        inputs: 1,
+        outputs: 1,
+        outputLabels: ['schedule triggers'],
+        icon: 'timer.svg',
+        label: function() {
+            return this.name || 'scheduler';
+        },
+        oneditprepare: function() {
+            // Show/hide context store field based on persistence type
+            $('#node-input-persistence').on('change', function() {
+                if ($(this).val() === 'context') {
+                    $('#context-store-row').show();
+                } else {
+                    $('#context-store-row').hide();
+                }
+            });
+            // Trigger on load to set initial state
+            $('#node-input-persistence').trigger('change');
+        }
+    });
+</script>
+
