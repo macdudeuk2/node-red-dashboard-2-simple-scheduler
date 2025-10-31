@@ -1,5 +1,5 @@
 const version = '1.0.0'
-const packageName = 'node-red-dashboard-2-ui-scheduler'
+const packageName = 'node-red-dashboard-2-simple-scheduler'
 
 /* eslint-disable no-unused-vars */
 const fs = require('fs')
