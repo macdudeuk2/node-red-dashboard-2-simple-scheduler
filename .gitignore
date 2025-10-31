@@ -3,7 +3,7 @@ node_modules/
 
 # Build output
 resources/
-ui-scheduler.umd.js
+# ui-scheduler.umd.js - commented out: needed for production installs without build
 
 # OS files
 .DS_Store

@@ -11,7 +11,9 @@
   "license": "MIT",
   "exports": {
     ".": "./ui-scheduler.umd.js",
-    "./ui-scheduler.umd.js": "./ui-scheduler.umd.js"
+    "./ui-scheduler.umd.js": "./ui-scheduler.umd.js",
+    "./package.json": "./package.json",
+    "./nodes/*": "./nodes/*"
   },
   "files": [
     "nodes/*",
