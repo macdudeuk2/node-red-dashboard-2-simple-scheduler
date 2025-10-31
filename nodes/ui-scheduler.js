@@ -283,15 +283,30 @@ module.exports = function (RED) {
     // Trigger a schedule
     node.triggerSchedule = function (schedule, event) {
       let rawPayload = event === 'start' ? schedule.payloadOn : schedule.payloadOff
+      let payloadType = event === 'start' ? schedule.payloadOnType : schedule.payloadOffType
       
-      // Try to parse payload as JSON (supports objects, arrays, numbers, booleans)
+      // Convert payload based on type
       let payload = rawPayload
-      if (typeof rawPayload === 'string') {
+      if (payloadType === 'num') {
+        payload = Number(rawPayload)
+      } else if (payloadType === 'bool') {
+        if (rawPayload === 'true' || rawPayload === true) {
+          payload = true
+        } else if (rawPayload === 'false' || rawPayload === false) {
+          payload = false
+        }
+      } else if (payloadType === 'json') {
         try {
           payload = JSON.parse(rawPayload)
         } catch (e) {
-          // Not JSON, use as-is (string)
+          node.error('Invalid JSON payload: ' + rawPayload)
           payload = rawPayload
+        }
+      } else {
+        // String type - remove quotes if present
+        payload = String(rawPayload)
+        if (payload.startsWith('"') && payload.endsWith('"')) {
+          payload = payload.slice(1, -1)
         }
       }
       
@@ -307,7 +322,7 @@ module.exports = function (RED) {
       }
       
       node.send(msg)
-      node.log('Triggered schedule "' + schedule.name + '" - ' + event + ' event with payload: ' + JSON.stringify(payload))
+      node.log('Triggered schedule "' + schedule.name + '" - ' + event + ' event with payload (' + typeof payload + '): ' + JSON.stringify(payload))
       
       // For duration schedules, schedule the end event
       if (schedule.type === 'duration' && event === 'start') {
@@ -569,7 +584,12 @@ module.exports = function (RED) {
           }
         }
       }
-      group.register(node, config, evts)
+      // Pass node name to widget
+      const widgetConfig = {
+        ...config,
+        name: node.name
+      }
+      group.register(node, widgetConfig, evts)
     } else {
       node.error('No group configured')
     }

@@ -1,7 +1,7 @@
 <template>
   <div class="simple-scheduler">
     <div class="scheduler-header">
-      <h3>Schedules</h3>
+      <h3>{{ nodeName }}</h3>
       <button @click="openAddDialog" class="btn-primary">+ Add Schedule</button>
     </div>
 
@@ -161,24 +161,40 @@
 
           <!-- Payloads -->
           <div class="form-group">
-            <label>{{ formData.type === 'timespan' || formData.type === 'duration' ? 'Payload On (when schedule starts) *' : 'Payload *' }}</label>
-            <input 
-              v-model="formData.payloadOn" 
-              type="text"
-              placeholder='true, 1, "text", {"key":"value"}, [1,2,3]'
-            />
-            <p class="help-text">Supports JSON: strings, numbers, booleans, objects, arrays</p>
+            <label>{{ formData.type === 'timespan' || formData.type === 'duration' || formData.type === 'weekly' ? 'Payload On (when schedule starts) *' : 'Payload *' }}</label>
+            <div class="payload-input-group">
+              <select v-model="formData.payloadOnType" class="payload-type-select">
+                <option v-for="type in payloadTypes" :key="type.value" :value="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+              <input 
+                v-model="formData.payloadOn" 
+                type="text"
+                :placeholder="getPayloadPlaceholder(formData.payloadOnType)"
+                class="payload-value-input"
+              />
+            </div>
+            <p class="help-text">{{ getPayloadHelpText(formData.payloadOnType) }}</p>
           </div>
 
-          <!-- Only show Payload Off for timespan and duration schedules -->
-          <div v-if="formData.type === 'timespan' || formData.type === 'duration'" class="form-group">
+          <!-- Show Payload Off for timespan, duration, and weekly schedules -->
+          <div v-if="formData.type === 'timespan' || formData.type === 'duration' || formData.type === 'weekly'" class="form-group">
             <label>Payload Off (when schedule ends)</label>
-            <input 
-              v-model="formData.payloadOff" 
-              type="text"
-              placeholder='false, 0, "off", {"key":"value"}'
-            />
-            <p class="help-text">Supports JSON: strings, numbers, booleans, objects, arrays</p>
+            <div class="payload-input-group">
+              <select v-model="formData.payloadOffType" class="payload-type-select">
+                <option v-for="type in payloadTypes" :key="type.value" :value="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+              <input 
+                v-model="formData.payloadOff" 
+                type="text"
+                :placeholder="getPayloadPlaceholder(formData.payloadOffType)"
+                class="payload-value-input"
+              />
+            </div>
+            <p class="help-text">{{ getPayloadHelpText(formData.payloadOffType) }}</p>
           </div>
 
           <div class="form-group">
@@ -217,12 +233,20 @@ export default {
     props: {
       type: Object,
       default: () => ({})
+    },
+    state: {
+      type: Object,
+      default: () => ({})
     }
   },
   computed: {
     socket() {
       // Access injected socket
       return this.$socket
+    },
+    nodeName() {
+      // Get node name from props, fallback to "Schedules"
+      return (this.props && this.props.name) || 'Schedules'
     }
   },
   data() {
@@ -234,16 +258,24 @@ export default {
         id: null,
         name: '',
         type: 'daily',
-        date: null,  // Changed from '' to null
+        date: null,
         time: '09:00',
         days: [],
         startTime: '09:00',
         endTime: '17:00',
         durationMinutes: 60,
         payloadOn: 'true',
+        payloadOnType: 'bool',  // string, num, bool, json
         payloadOff: 'false',
+        payloadOffType: 'bool',
         enabled: true
       },
+      payloadTypes: [
+        { value: 'str', label: 'string' },
+        { value: 'num', label: 'number' },
+        { value: 'bool', label: 'boolean' },
+        { value: 'json', label: 'JSON' }
+      ],
       daysOfWeek: [
         { value: 'sunday', label: 'Sunday' },
         { value: 'monday', label: 'Monday' },
@@ -259,8 +291,7 @@ export default {
     console.log('[UI Scheduler Mounted] Component mounted')
     console.log('[UI Scheduler Mounted] this.id:', this.id)
     console.log('[UI Scheduler Mounted] this.props:', this.props)
-    console.log('[UI Scheduler Mounted] this.$socket:', this.$socket)
-    console.log('[UI Scheduler Mounted] this.socket:', this.socket)
+    console.log('[UI Scheduler Mounted] Node name:', this.nodeName)
     
     // Listen for schedule updates from Node-RED
     // Use socket to listen for widget-load and msg-input events
@@ -279,6 +310,12 @@ export default {
         if (msg && msg.payload && msg.payload.command === 'schedules-updated') {
           this.schedules = msg.payload.schedules || []
         }
+      })
+      
+      // Listen for connection/reconnection events (e.g., after deploy)
+      this.socket.on('connect', () => {
+        console.log('[UI Scheduler] Socket connected, requesting schedules')
+        this.requestSchedules()
       })
     }
     
@@ -414,6 +451,19 @@ export default {
         alert('Please select at least one day for the weekly schedule')
         return
       }
+      
+      // Validate payload On
+      if (!this.validatePayload(this.formData.payloadOn, this.formData.payloadOnType)) {
+        alert(`Invalid Payload On for type "${this.formData.payloadOnType}"`)
+        return
+      }
+      
+      // Validate payload Off (if applicable)
+      if ((this.formData.type === 'timespan' || this.formData.type === 'duration' || this.formData.type === 'weekly') && 
+          !this.validatePayload(this.formData.payloadOff, this.formData.payloadOffType)) {
+        alert(`Invalid Payload Off for type "${this.formData.payloadOffType}"`)
+        return
+      }
 
       // Prepare schedule data
       const schedule = {
@@ -445,6 +495,41 @@ export default {
 
       this.closeDialog()
     },
+    getPayloadPlaceholder(type) {
+      const placeholders = {
+        str: '"text"',
+        num: '123',
+        bool: 'true',
+        json: '{"key":"value"}'
+      }
+      return placeholders[type] || ''
+    },
+    getPayloadHelpText(type) {
+      const helpTexts = {
+        str: 'String value (quotes optional)',
+        num: 'Number value (e.g., 123, 45.67)',
+        bool: 'Boolean: true or false',
+        json: 'JSON object or array: {"key":"value"} or [1,2,3]'
+      }
+      return helpTexts[type] || ''
+    },
+    validatePayload(value, type) {
+      if (!value && value !== 0 && value !== false) return false
+      
+      if (type === 'num') {
+        return !isNaN(value)
+      } else if (type === 'bool') {
+        return value === 'true' || value === 'false' || value === true || value === false
+      } else if (type === 'json') {
+        try {
+          JSON.parse(value)
+          return true
+        } catch (e) {
+          return false
+        }
+      }
+      return true // string always valid
+    },
     closeDialog() {
       this.showAddDialog = false
       this.editingSchedule = null
@@ -452,14 +537,16 @@ export default {
         id: null,
         name: '',
         type: 'daily',
-        date: null,  // Changed from '' to null
+        date: null,
         time: '09:00',
         days: [],
         startTime: '09:00',
         endTime: '17:00',
         durationMinutes: 60,
         payloadOn: 'true',
+        payloadOnType: 'bool',
         payloadOff: 'false',
+        payloadOffType: 'bool',
         enabled: true
       }
     },
@@ -742,6 +829,29 @@ input:checked + .slider:before {
   font-size: 12px;
   color: #666;
   margin: 4px 0 0 0;
+}
+
+.payload-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.payload-type-select {
+  width: 120px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.payload-value-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
 }
 </style>
 
