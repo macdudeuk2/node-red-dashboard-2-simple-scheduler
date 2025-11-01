@@ -20,6 +20,15 @@
         </div>
         
         <div class="schedule-actions">
+          <button 
+            v-if="schedule.type === 'duration'" 
+            @click="triggerSchedule(schedule.id)" 
+            class="btn-icon btn-trigger" 
+            title="Trigger Now"
+          >
+            ▶️
+          </button>
+          
           <label class="toggle-switch">
             <input 
               type="checkbox" 
@@ -46,8 +55,8 @@
 
     <!-- Add/Edit Dialog - Teleported to body to escape stacking context -->
     <Teleport to="body">
-      <div v-if="showAddDialog" class="dialog-overlay" @click.self="closeDialog">
-        <div class="dialog-content" @click.stop @mousedown.stop>
+      <div v-if="showAddDialog" class="dialog-overlay" @mousedown.self="closeDialog">
+        <div class="dialog-content">
         <div class="dialog-header">
           <h3>{{ editingSchedule ? 'Edit Schedule' : 'Add Schedule' }}</h3>
           <button @click="closeDialog" class="btn-close">×</button>
@@ -430,6 +439,14 @@ export default {
         }
       }
     },
+    triggerSchedule(scheduleId) {
+      if (this.socket) {
+        this.socket.emit('widget-action', this.id, {
+          action: 'trigger',
+          payload: scheduleId
+        })
+      }
+    },
     saveSchedule() {
       // Validate form
       if (!this.formData.name) {
@@ -710,6 +727,16 @@ input:checked + .slider:before {
 
 .btn-delete {
   color: #dc3545;
+}
+
+.btn-trigger {
+  color: #28a745;
+  font-size: 1.1em;
+}
+
+.btn-trigger:hover {
+  color: #218838;
+  transform: scale(1.2);
 }
 
 .dialog-overlay {

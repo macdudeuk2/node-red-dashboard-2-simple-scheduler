@@ -266,9 +266,11 @@ module.exports = function (RED) {
           const endDelay = differenceInMilliseconds(end, new Date())
           
           if (endDelay > 0) {
-            setTimeout(() => {
+            const endTimerId = setTimeout(() => {
               node.triggerSchedule(schedule, 'end')
+              delete node.timers[schedule.id + '-end']
             }, endDelay)
+            node.timers[schedule.id + '-end'] = endTimerId
           }
         }
       }
@@ -319,9 +321,11 @@ module.exports = function (RED) {
       
       // For duration schedules, schedule the end event
       if (schedule.type === 'duration' && event === 'start') {
-        setTimeout(() => {
+        const durationTimerId = setTimeout(() => {
           node.triggerSchedule(schedule, 'end')
+          delete node.timers[schedule.id + '-duration']
         }, schedule.durationMinutes * 60 * 1000)
+        node.timers[schedule.id + '-duration'] = durationTimerId
       }
       
       // For weekly schedules with timespan, schedule the end event
@@ -342,9 +346,11 @@ module.exports = function (RED) {
         const endDelay = differenceInMilliseconds(end, new Date())
         
         if (endDelay > 0) {
-          setTimeout(() => {
+          const weeklyEndTimerId = setTimeout(() => {
             node.triggerSchedule(schedule, 'end')
+            delete node.timers[schedule.id + '-weekly-end']
           }, endDelay)
+          node.timers[schedule.id + '-weekly-end'] = weeklyEndTimerId
         }
       }
     }
@@ -439,6 +445,16 @@ module.exports = function (RED) {
             const scheduleId = payload
             const schedule = node.schedules.find(s => s.id === scheduleId)
             if (schedule) {
+              // If disabling and there's a pending "off" action, send it immediately
+              if (action === 'disable') {
+                const hasPendingOff = node.timers[scheduleId + '-duration'] || 
+                                     node.timers[scheduleId + '-end'] || 
+                                     node.timers[scheduleId + '-weekly-end']
+                if (hasPendingOff) {
+                  node.triggerSchedule(schedule, 'end')
+                }
+              }
+              
               schedule.enabled = (action === 'enable')
               node.saveSchedules()
               node.stopAllSchedules()
@@ -530,6 +546,16 @@ module.exports = function (RED) {
           const scheduleId = msg.payload
           const schedule = node.schedules.find(s => s.id === scheduleId)
           if (schedule) {
+            // If disabling and there's a pending "off" action, send it immediately
+            if (command === 'disable') {
+              const hasPendingOff = node.timers[scheduleId + '-duration'] || 
+                                   node.timers[scheduleId + '-end'] || 
+                                   node.timers[scheduleId + '-weekly-end']
+              if (hasPendingOff) {
+                node.triggerSchedule(schedule, 'end')
+              }
+            }
+            
             schedule.enabled = (command === 'enable')
             node.saveSchedules()
             node.stopAllSchedules()
@@ -660,6 +686,16 @@ module.exports = function (RED) {
           const scheduleId = payload
           const schedule = node.schedules.find(s => s.id === scheduleId)
           if (schedule) {
+            // If disabling and there's a pending "off" action, send it immediately
+            if (action === 'disable') {
+              const hasPendingOff = node.timers[scheduleId + '-duration'] || 
+                                   node.timers[scheduleId + '-end'] || 
+                                   node.timers[scheduleId + '-weekly-end']
+              if (hasPendingOff) {
+                node.triggerSchedule(schedule, 'end')
+              }
+            }
+            
             schedule.enabled = (action === 'enable')
             node.saveSchedules()
             node.stopAllSchedules()
