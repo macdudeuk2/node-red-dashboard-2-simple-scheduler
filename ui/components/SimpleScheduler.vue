@@ -39,17 +39,30 @@
             <span class="slider"></span>
           </label>
           
-          <button @click="editSchedule(schedule)" class="btn-icon" title="Edit">
-            ✏️
-          </button>
-          
-          <button @click="copySchedule(schedule)" class="btn-icon" title="Copy">
-            📋
-          </button>
-          
-          <button @click="deleteSchedule(schedule.id)" class="btn-icon btn-delete" title="Delete">
-            🗑️
-          </button>
+          <div class="menu-container">
+            <button 
+              @click="toggleMenu(schedule.id)" 
+              class="btn-icon btn-menu" 
+              title="More actions"
+            >
+              ⋮
+            </button>
+            
+            <div v-if="openMenuId === schedule.id" class="menu-dropdown">
+              <button @click="editSchedule(schedule)" class="menu-item">
+                <span class="menu-icon">✏️</span>
+                <span>Edit</span>
+              </button>
+              <button @click="copySchedule(schedule)" class="menu-item">
+                <span class="menu-icon">📋</span>
+                <span>Copy</span>
+              </button>
+              <button @click="deleteSchedule(schedule.id)" class="menu-item menu-item-delete">
+                <span class="menu-icon">🗑️</span>
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -296,7 +309,8 @@ export default {
         { value: 'thursday', label: 'Thursday' },
         { value: 'friday', label: 'Friday' },
         { value: 'saturday', label: 'Saturday' }
-      ]
+      ],
+      openMenuId: null
     }
   },
   mounted() {
@@ -324,8 +338,13 @@ export default {
     
     // Request initial schedules
     this.requestSchedules()
+    
+    // Add click outside handler to close menu
+    document.addEventListener('click', this.handleClickOutside)
   },
   beforeUnmount() {
+    // Remove click outside handler
+    document.removeEventListener('click', this.handleClickOutside)
     // Clean up listeners
     if (this.socket) {
       this.socket.off('msg-input:' + this.id)
@@ -340,6 +359,22 @@ export default {
           action: 'list',
           payload: null
         })
+      }
+    },
+    toggleMenu(scheduleId) {
+      if (this.openMenuId === scheduleId) {
+        this.openMenuId = null
+      } else {
+        this.openMenuId = scheduleId
+      }
+    },
+    closeMenu() {
+      this.openMenuId = null
+    },
+    handleClickOutside(event) {
+      // Close menu if clicking outside of any menu
+      if (!event.target.closest('.menu-container')) {
+        this.closeMenu()
       }
     },
     getScheduleTypeLabel(type) {
@@ -398,6 +433,7 @@ export default {
       }
     },
     editSchedule(schedule) {
+      this.closeMenu()
       this.editingSchedule = schedule
       this.formData = { 
         ...schedule,
@@ -418,6 +454,7 @@ export default {
       this.showAddDialog = true
     },
     copySchedule(schedule) {
+      this.closeMenu()
       const copy = {
         ...schedule,
         id: null,
@@ -431,6 +468,7 @@ export default {
       this.showAddDialog = true
     },
     deleteSchedule(scheduleId) {
+      this.closeMenu()
       if (confirm('Are you sure you want to delete this schedule?')) {
         if (this.socket) {
           this.socket.emit('widget-action', this.id, {
@@ -744,6 +782,62 @@ input:checked + .slider:before {
   color: #ccc;
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.menu-container {
+  position: relative;
+}
+
+.btn-menu {
+  font-size: 1.3em;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  min-width: 120px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: white;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.menu-item-delete {
+  color: #dc3545;
+}
+
+.menu-item-delete:hover {
+  background-color: #fff5f5;
+}
+
+.menu-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
 }
 
 .dialog-overlay {

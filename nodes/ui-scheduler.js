@@ -1,4 +1,4 @@
-const version = '1.0.0'
+const version = '1.1.0'
 const packageName = 'node-red-dashboard-2-simple-scheduler'
 
 /* eslint-disable no-unused-vars */
