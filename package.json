@@ -2,6 +2,7 @@
   "name": "node-red-dashboard-2-simple-scheduler",
   "version": "1.0.0",
   "description": "A simple, reliable scheduler node for Node-RED Dashboard 2.0",
+  "author": "macdudeuk2",
   "keywords": [
     "node-red",
     "node-red-dashboard-2",
@@ -9,6 +10,14 @@
     "time-scheduler"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/macdudeuk2/node-red-dashboard-2-simple-scheduler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/macdudeuk2/node-red-dashboard-2-simple-scheduler/issues"
+  },
+  "homepage": "https://github.com/macdudeuk2/node-red-dashboard-2-simple-scheduler#readme",
   "exports": {
     "import": "./resources/ui-scheduler.umd.js",
     "require": "./resources/ui-scheduler.umd.js"
