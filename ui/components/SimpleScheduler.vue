@@ -41,27 +41,13 @@
           
           <div class="menu-container">
             <button 
-              @click="toggleMenu(schedule.id)" 
+              @click="toggleMenu(schedule.id, $event)" 
               class="btn-icon btn-menu" 
+              :ref="'menu-btn-' + schedule.id"
               title="More actions"
             >
               ⋮
             </button>
-            
-            <div v-if="openMenuId === schedule.id" class="menu-dropdown">
-              <button @click="editSchedule(schedule)" class="menu-item">
-                <span class="menu-icon">✏️</span>
-                <span>Edit</span>
-              </button>
-              <button @click="copySchedule(schedule)" class="menu-item">
-                <span class="menu-icon">📋</span>
-                <span>Copy</span>
-              </button>
-              <button @click="deleteSchedule(schedule.id)" class="menu-item menu-item-delete">
-                <span class="menu-icon">🗑️</span>
-                <span>Delete</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -239,6 +225,41 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Overflow Menu - Teleported to body to escape stacking context -->
+    <Teleport to="body">
+      <div 
+        v-if="openMenuId && menuPosition" 
+        class="menu-dropdown" 
+        :style="{ top: menuPosition.top + 'px', left: menuPosition.left + 'px' }"
+      >
+        <button 
+          v-for="schedule in schedules.filter(s => s.id === openMenuId)" 
+          :key="'edit-' + schedule.id"
+          @click="editSchedule(schedule)" 
+          class="menu-item"
+        >
+          <span class="menu-icon">✏️</span>
+          <span>Edit</span>
+        </button>
+        <button 
+          v-for="schedule in schedules.filter(s => s.id === openMenuId)" 
+          :key="'copy-' + schedule.id"
+          @click="copySchedule(schedule)" 
+          class="menu-item"
+        >
+          <span class="menu-icon">📋</span>
+          <span>Copy</span>
+        </button>
+        <button 
+          @click="deleteSchedule(openMenuId)" 
+          class="menu-item menu-item-delete"
+        >
+          <span class="menu-icon">🗑️</span>
+          <span>Delete</span>
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -310,7 +331,8 @@ export default {
         { value: 'friday', label: 'Friday' },
         { value: 'saturday', label: 'Saturday' }
       ],
-      openMenuId: null
+      openMenuId: null,
+      menuPosition: null
     }
   },
   mounted() {
@@ -361,19 +383,31 @@ export default {
         })
       }
     },
-    toggleMenu(scheduleId) {
+    toggleMenu(scheduleId, event) {
       if (this.openMenuId === scheduleId) {
         this.openMenuId = null
+        this.menuPosition = null
       } else {
         this.openMenuId = scheduleId
+        
+        // Calculate position for the dropdown menu
+        const button = event.target
+        const rect = button.getBoundingClientRect()
+        
+        // Position below and aligned to right edge of button
+        this.menuPosition = {
+          top: rect.bottom + 4,
+          left: rect.right - 120 // 120px is min-width of menu
+        }
       }
     },
     closeMenu() {
       this.openMenuId = null
+      this.menuPosition = null
     },
     handleClickOutside(event) {
-      // Close menu if clicking outside of any menu
-      if (!event.target.closest('.menu-container')) {
+      // Close menu if clicking outside of menu button or dropdown
+      if (!event.target.closest('.menu-container') && !event.target.closest('.menu-dropdown')) {
         this.closeMenu()
       }
     },
@@ -644,6 +678,8 @@ export default {
   background: #f5f5f5;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
+  position: relative;
+  overflow: visible;
 }
 
 .schedule-info {
@@ -795,16 +831,13 @@ input:checked + .slider:before {
 }
 
 .menu-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
+  position: fixed;
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   min-width: 120px;
-  z-index: 1000;
+  z-index: 999999;
   overflow: hidden;
 }
 
