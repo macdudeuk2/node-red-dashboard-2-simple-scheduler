@@ -44,9 +44,10 @@
       </div>
     </div>
 
-    <!-- Add/Edit Dialog -->
-    <div v-if="showAddDialog" class="dialog-overlay" @click.self="closeDialog">
-      <div class="dialog-content" @click.stop @mousedown.stop>
+    <!-- Add/Edit Dialog - Teleported to body to escape stacking context -->
+    <Teleport to="body">
+      <div v-if="showAddDialog" class="dialog-overlay" @click.self="closeDialog">
+        <div class="dialog-content" @click.stop @mousedown.stop>
         <div class="dialog-header">
           <h3>{{ editingSchedule ? 'Edit Schedule' : 'Add Schedule' }}</h3>
           <button @click="closeDialog" class="btn-close">×</button>
@@ -212,8 +213,9 @@
           <button @click="closeDialog" class="btn-secondary">Cancel</button>
           <button @click="saveSchedule" class="btn-primary">Save</button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
