@@ -184,6 +184,127 @@ If a widget works locally but not on production:
 - [ ] Check browser Network tab for exact 404 URL
 - [ ] Compare to a working widget's structure
 
+## Z-Index and Stacking Context Issue
+
+### The Problem
+
+When a widget displays a modal/dialog, it can appear **below** other ui-groups that are rendered later in the Dashboard 2.0 page DOM, even with very high z-index values (e.g., 999999).
+
+**Why:**
+- Each Dashboard 2.0 ui-group creates its own stacking context
+- DOM order matters: later elements appear on top within the same stacking level
+- A dialog inside a widget is trapped in that widget's stacking context
+- Z-index only works within the same stacking context
+
+### The Solution: Vue 3 Teleport
+
+Use Vue 3's `<Teleport>` component to move the dialog to the document body level:
+
+```vue
+<template>
+  <div class="my-widget">
+    <!-- Widget content -->
+    
+    <!-- Dialog teleported to body -->
+    <Teleport to="body">
+      <div v-if="showDialog" class="dialog-overlay">
+        <div class="dialog-content">
+          <!-- Dialog content -->
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+```
+
+**What this does:**
+- Moves the dialog DOM element to `<body>`, outside all Dashboard containers
+- Escapes the widget's stacking context entirely
+- Dialog now appears above ALL ui-groups regardless of DOM order
+- Z-index now works as expected at the top level
+
+**CSS for the dialog:**
+```css
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;  /* High value to ensure it's on top */
+}
+```
+
+## Updating Production Server
+
+### Clean Update Process
+
+When you push changes to GitHub and need to update the production server:
+
+```bash
+# SSH into production server
+ssh your-server
+
+# Stop Node-RED (if using systemctl)
+sudo systemctl stop nodered
+
+# OR if running as a service under your user
+# (find the process and kill it, or use pm2 stop, etc.)
+
+# Go to Node-RED directory
+cd ~/.node-red
+
+# Uninstall the old version
+npm uninstall node-red-dashboard-2-simple-scheduler
+
+# Install latest from GitHub
+npm install github:macdudeuk2/node-red-dashboard-2-simple-scheduler
+
+# Clear Node-RED cache
+rm .config.nodes.json
+
+# Restart Node-RED
+sudo systemctl start nodered
+
+# OR restart your service however you normally do
+```
+
+### Quick Update (if Node-RED can handle restarts)
+
+```bash
+cd ~/.node-red
+npm uninstall node-red-dashboard-2-simple-scheduler && \
+npm install github:macdudeuk2/node-red-dashboard-2-simple-scheduler && \
+rm .config.nodes.json
+# Restart Node-RED through your normal method
+```
+
+### Verification
+
+1. Check Node-RED logs for errors: `sudo journalctl -u nodered -f`
+2. Open Dashboard in browser and hard refresh (Cmd+Shift+R / Ctrl+Shift+F5)
+3. Check browser console for any errors
+4. Test widget functionality
+
+### Common Issues After Update
+
+**404 on widget file:**
+- Clear browser cache (hard refresh)
+- Verify file exists: `ls -la ~/.node-red/node_modules/node-red-dashboard-2-simple-scheduler/resources/ui-scheduler.umd.js`
+- Check Node-RED logs for module loading errors
+
+**Widget not appearing:**
+- Delete `.config.nodes.json` and restart Node-RED
+- Check Node-RED logs for registration errors
+
+**Old version still showing:**
+- Browser cache: Hard refresh or clear cache
+- Node-RED cache: Delete `.config.nodes.json` and restart
+
 ## Key Lessons
 
 1. **RTFM first** - Check documentation before trial and error
@@ -192,6 +313,8 @@ If a widget works locally but not on production:
 4. **Test install methods** - Don't assume GitHub install works like local
 5. **Version differences matter** - Always test against production versions
 6. **Built outputs may need committing** - For widgets, build outputs aren't always gitignored
+7. **Use Teleport for modals** - Escape stacking context issues in Dashboard 2.0 widgets
+8. **Test production updates** - Always have a rollback plan
 
 ## Resources
 
