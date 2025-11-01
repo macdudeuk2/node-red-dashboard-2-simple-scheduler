@@ -35,3 +35,4 @@ fs.writeFileSync(targetFilePath, targetFileContent)
 
 console.log(`Version ${packageJson.version} and package name ${packageJson.name} have been added/updated in ${targetFilePath}`)
 
+
