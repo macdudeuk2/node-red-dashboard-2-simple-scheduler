@@ -23,8 +23,9 @@
           <button 
             v-if="schedule.type === 'duration'" 
             @click="triggerSchedule(schedule.id)" 
+            :disabled="!schedule.enabled"
             class="btn-icon btn-trigger" 
-            title="Trigger Now"
+            :title="schedule.enabled ? 'Trigger Now' : 'Enable schedule to trigger'"
           >
             ▶️
           </button>
@@ -734,9 +735,15 @@ input:checked + .slider:before {
   font-size: 1.1em;
 }
 
-.btn-trigger:hover {
+.btn-trigger:hover:not(:disabled) {
   color: #218838;
   transform: scale(1.2);
+}
+
+.btn-trigger:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .dialog-overlay {

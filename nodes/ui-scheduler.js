@@ -466,7 +466,7 @@ module.exports = function (RED) {
         } else if (action === 'trigger') {
           const scheduleId = payload
           const schedule = node.schedules.find(s => s.id === scheduleId)
-          if (schedule) {
+          if (schedule && schedule.enabled) {
             node.triggerSchedule(schedule, 'start')
           }
         }
@@ -711,7 +711,7 @@ module.exports = function (RED) {
       } else if (action === 'trigger') {
         const scheduleId = payload
         const schedule = node.schedules.find(s => s.id === scheduleId)
-        if (schedule) {
+        if (schedule && schedule.enabled) {
           node.triggerSchedule(schedule, 'start')
         }
       }
