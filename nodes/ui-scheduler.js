@@ -459,13 +459,6 @@ module.exports = function (RED) {
               node.saveSchedules()
               node.stopAllSchedules()
               node.startAllSchedules()
-              
-              node.send([null, {
-                payload: {
-                  command: 'schedules-updated',
-                  schedules: node.schedules
-                }
-              }])
             }
           } catch (err) {
             node.error('Error toggling schedule: ' + err.message)
