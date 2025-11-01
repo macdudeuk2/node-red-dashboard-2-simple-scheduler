@@ -12,7 +12,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/macdudeuk2/node-red-dashboard-2-simple-scheduler.git"
+    "url": "git+https://github.com/macdudeuk2/node-red-dashboard-2-simple-scheduler.git"
   },
   "bugs": {
     "url": "https://github.com/macdudeuk2/node-red-dashboard-2-simple-scheduler/issues"
