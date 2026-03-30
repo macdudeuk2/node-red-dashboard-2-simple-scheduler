@@ -130,6 +130,16 @@ Schedules are automatically loaded when Node-RED starts.
 
 The scheduler uses timezone-aware date handling with automatic DST (Daylight Saving Time) transitions. Configure the timezone in the node settings (defaults to system timezone).
 
+## Changelog
+
+### 1.1.3
+- **Fix:** Timespan and weekly timespan schedules now recover correctly after a Node-RED restart or re-deploy that occurs mid-window. The start event fires immediately and the end event is scheduled for the correct time.
+- **Fix:** Timespan end events now properly reschedule the next day's cycle, preventing schedules from going dormant after the first run.
+- **Fix:** Dashboard UI now reliably loads schedules after a Node-RED restart without requiring a manual page refresh.
+
+### 1.1.2
+- Initial public release
+
 ## License
 
 MIT

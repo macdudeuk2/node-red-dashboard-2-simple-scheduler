@@ -1,5 +1,5 @@
-const version = '1.1.1'
-const packageName = 'node-red-dashboard-2-simple-scheduler'
+const version = '1.1.3'
+const packageName = '@macdudeuk/node-red-dashboard-2-simple-scheduler'
 
 /* eslint-disable no-unused-vars */
 const fs = require('fs')
@@ -164,6 +164,37 @@ function isInTimespan(schedule, timezone, now) {
 }
 
 /**
+ * Check if current time is within a weekly timespan window
+ */
+function isInWeeklyTimespan(schedule, timezone, now) {
+  if (schedule.type !== 'weekly' || !schedule.startTime || !schedule.endTime) return false
+
+  const tzNow = new TZDate(now, timezone)
+  const todayStart = startOfDay(tzNow)
+  const currentDay = tzNow.getDay()
+
+  const dayMap = {
+    sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+    thursday: 4, friday: 5, saturday: 6
+  }
+
+  const targetDays = schedule.days.map(d => dayMap[d])
+  if (!targetDays.includes(currentDay)) return false
+
+  const [startHours, startMinutes] = schedule.startTime.split(':').map(Number)
+  const [endHours, endMinutes] = schedule.endTime.split(':').map(Number)
+
+  let start = setHours(setMinutes(todayStart, startMinutes), startHours)
+  let end = setHours(setMinutes(todayStart, endMinutes), endHours)
+
+  if (isBefore(end, start)) {
+    end = addDays(end, 1)
+  }
+
+  return isAfter(tzNow, start) && isBefore(tzNow, end)
+}
+
+/**
  * Main Node Definition
  */
 module.exports = function (RED) {
@@ -226,9 +257,49 @@ module.exports = function (RED) {
       }
     }
     
+    // Schedule the end event for a timespan schedule
+    node.scheduleTimespanEnd = function (schedule) {
+      if (node.timers[schedule.id + '-end']) {
+        clearTimeout(node.timers[schedule.id + '-end'])
+        delete node.timers[schedule.id + '-end']
+      }
+
+      const tzNow = new TZDate(new Date(), node.timezone)
+      const todayStart = startOfDay(tzNow)
+
+      const [endHours, endMinutes] = schedule.endTime.split(':').map(Number)
+      let end = setHours(setMinutes(todayStart, endMinutes), endHours)
+
+      const [startHours, startMinutes] = schedule.startTime.split(':').map(Number)
+      let start = setHours(setMinutes(todayStart, startMinutes), startHours)
+
+      if (isBefore(end, start)) {
+        end = addDays(end, 1)
+      }
+
+      const endDelay = differenceInMilliseconds(end, new Date())
+
+      if (endDelay > 0) {
+        const endTimerId = setTimeout(() => {
+          node.triggerSchedule(schedule, 'end')
+          delete node.timers[schedule.id + '-end']
+          node.scheduleEvent(schedule)
+        }, endDelay)
+        node.timers[schedule.id + '-end'] = endTimerId
+      }
+    }
+
     // Schedule an event
     node.scheduleEvent = function (schedule) {
       if (!schedule.enabled) return
+
+      // Mid-window recovery for weekly timespan schedules:
+      // fire start immediately if we're inside the window and no end timer is pending
+      if (schedule.type === 'weekly' && schedule.startTime && schedule.endTime &&
+          !node.timers[schedule.id + '-weekly-end'] &&
+          isInWeeklyTimespan(schedule, node.timezone, new Date())) {
+        node.triggerSchedule(schedule, 'start')
+      }
       
       const nextTime = calculateNextOccurrence(schedule, node.timezone, new Date())
       
@@ -240,39 +311,22 @@ module.exports = function (RED) {
         const timerId = setTimeout(() => {
           node.triggerSchedule(schedule, 'start')
           
-          // Reschedule for next occurrence (except one-time)
-          if (schedule.type !== 'once') {
+          if (schedule.type === 'timespan') {
+            node.scheduleTimespanEnd(schedule)
+          } else if (schedule.type !== 'once') {
             node.scheduleEvent(schedule)
           }
         }, delay)
         
         node.timers[schedule.id] = timerId
         
-        // For timespan schedules, also schedule the end event
+        // If the end time is already in the future, schedule it now too
         if (schedule.type === 'timespan') {
-          const tzNow = new TZDate(new Date(), node.timezone)
-          const todayStart = startOfDay(tzNow)
-          
-          const [endHours, endMinutes] = schedule.endTime.split(':').map(Number)
-          let end = setHours(setMinutes(todayStart, endMinutes), endHours)
-          
-          const [startHours, startMinutes] = schedule.startTime.split(':').map(Number)
-          let start = setHours(setMinutes(todayStart, startMinutes), startHours)
-          
-          if (isBefore(end, start)) {
-            end = addDays(end, 1)
-          }
-          
-          const endDelay = differenceInMilliseconds(end, new Date())
-          
-          if (endDelay > 0) {
-            const endTimerId = setTimeout(() => {
-              node.triggerSchedule(schedule, 'end')
-              delete node.timers[schedule.id + '-end']
-            }, endDelay)
-            node.timers[schedule.id + '-end'] = endTimerId
-          }
+          node.scheduleTimespanEnd(schedule)
         }
+      } else if (schedule.type === 'timespan' && isInTimespan(schedule, node.timezone, new Date())) {
+        node.triggerSchedule(schedule, 'start')
+        node.scheduleTimespanEnd(schedule)
       }
     }
     
@@ -578,15 +632,22 @@ module.exports = function (RED) {
       const evts = {
         onSocket: {
           'widget-action': function (conn, id, msg) {
-            // Handle socket events from the UI
             if (id === node.id && msg && msg.action) {
               const inputMsg = {
                 action: msg.action,
                 payload: msg.payload
               }
-              
-              // Process the action directly here, passing the connection for response
               handleWidgetAction(inputMsg, conn, id)
+            }
+          },
+          'widget-load': function (conn, id) {
+            if (id === node.id) {
+              conn.emit('msg-input:' + id, {
+                payload: {
+                  command: 'schedules-updated',
+                  schedules: node.schedules
+                }
+              })
             }
           }
         }

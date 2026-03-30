@@ -354,20 +354,21 @@ export default {
       
       // Listen for connection/reconnection events (e.g., after deploy)
       this.socket.on('connect', () => {
-        this.requestSchedules()
+        this.requestSchedulesWithRetry()
       })
     }
     
     // Request initial schedules
-    this.requestSchedules()
+    this.requestSchedulesWithRetry()
     
     // Add click outside handler to close menu
     document.addEventListener('click', this.handleClickOutside)
   },
   beforeUnmount() {
-    // Remove click outside handler
     document.removeEventListener('click', this.handleClickOutside)
-    // Clean up listeners
+    if (this._retryTimers) {
+      this._retryTimers.forEach(t => clearTimeout(t))
+    }
     if (this.socket) {
       this.socket.off('msg-input:' + this.id)
       this.socket.off('widget-load:' + this.id)
@@ -375,13 +376,25 @@ export default {
   },
   methods: {
     requestSchedules() {
-      // Send via socket to Node-RED
       if (this.socket) {
         this.socket.emit('widget-action', this.id, {
           action: 'list',
           payload: null
         })
       }
+    },
+    requestSchedulesWithRetry() {
+      this.requestSchedules()
+      const retryDelays = [500, 2000, 5000]
+      retryDelays.forEach(delay => {
+        const timerId = setTimeout(() => {
+          if (this.schedules.length === 0) {
+            this.requestSchedules()
+          }
+        }, delay)
+        this._retryTimers = this._retryTimers || []
+        this._retryTimers.push(timerId)
+      })
     },
     toggleMenu(scheduleId, event) {
       if (this.openMenuId === scheduleId) {
